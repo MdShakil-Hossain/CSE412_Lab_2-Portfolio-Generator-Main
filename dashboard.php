@@ -15,6 +15,18 @@ $stmt->execute();
 $stmt->bind_result($user_email);
 $stmt->fetch();
 $stmt->close();
+
+// Check if a portfolio exists for the user
+$has_portfolio = false;
+$stmt = $conn->prepare("SELECT COUNT(*) FROM portfolios WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($portfolio_count);
+$stmt->fetch();
+if ($portfolio_count > 0) {
+    $has_portfolio = true;
+}
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,13 +57,26 @@ $stmt->close();
                     <i class="fas fa-plus"></i> Create New Portfolio
                 </a>
             </div>
+
+            <?php if ($has_portfolio): ?>
+                <div class="enhance-portfolio-card">
+                    <div class="card-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <h2>Enhance Existing Portfolio</h2>
+                    <p class="card-description">Update or refine your existing portfolio with new details and improvements.</p>
+                    <a href="portfolio_edit.php" class="btn btn-secondary btn-large">
+                        <i class="fas fa-pen"></i> Enhance Existing Portfolio
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
     <footer class="main-footer">
         <div class="container">
             <p><a href="logout.php" class="text-link"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
-            <p>&copy; <?php echo date('Y'); ?> Portfolio Generator. All rights reserved.</p>
+            <p>© <?php echo date('Y'); ?> Portfolio Generator. All rights reserved.</p>
         </div>
     </footer>
 </body>
