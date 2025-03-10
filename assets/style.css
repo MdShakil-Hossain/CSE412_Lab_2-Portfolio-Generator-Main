@@ -101,8 +101,18 @@ h2 {
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
+    background-color: #6c757d; /* Adjusted to a neutral secondary color */
     color: white;
+    padding: 1.2rem 3rem; /* Match btn-large padding */
+    font-size: 1.2rem; /* Match btn-large font size */
+    border-radius: 50px; /* Match btn-large rounded design */
+    display: inline-block;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268; /* Darker shade on hover */
+    transform: translateY(-2px); /* Match hover effect of other buttons */
 }
 
 .btn-block {
@@ -113,6 +123,12 @@ h2 {
 
 .btn:hover {
     transform: translateY(-2px);
+}
+
+.btn-large {
+    padding: 1.2rem 3rem;
+    font-size: 1.2rem;
+    border-radius: 50px;
 }
 
 .alert {
@@ -187,25 +203,6 @@ h2 {
     background: #f8f9fa;
 }
 
-@media (max-width: 768px) {
-    h1 {
-        font-size: 2rem;
-    }
-    
-    h2 {
-        font-size: 1.4rem;
-    }
-    
-    .cta-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .auth-card {
-        margin: 0 1rem;
-        padding: 1.5rem;
-    }
-}
 /* Simplified Dashboard Styles */
 .dashboard-container {
     padding: 4rem 0;
@@ -229,9 +226,31 @@ h2 {
     transform: translateY(-5px);
 }
 
+.enhance-portfolio-card {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 3rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+    margin: 20px 0; /* Added margin to match your original suggestion */
+}
+
+.enhance-portfolio-card:hover {
+    transform: translateY(-5px);
+}
+
 .card-icon {
     font-size: 4rem;
     color: var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+.enhance-portfolio-card .card-icon {
+    font-size: 4rem; /* Match create-portfolio-card icon size */
+    color: var(--secondary-color); /* Differentiate with secondary color */
     margin-bottom: 1.5rem;
 }
 
@@ -240,12 +259,6 @@ h2 {
     color: #666;
     margin: 1.5rem 0;
     line-height: 1.8;
-}
-
-.btn-large {
-    padding: 1.2rem 3rem;
-    font-size: 1.2rem;
-    border-radius: 50px;
 }
 
 .main-footer {
@@ -266,12 +279,39 @@ h2 {
 }
 
 @media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.4rem;
+    }
+    
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .auth-card {
+        margin: 0 1rem;
+        padding: 1.5rem;
+    }
+
     .create-portfolio-card {
+        margin: 0 1rem;
+        padding: 2rem;
+    }
+
+    .enhance-portfolio-card {
         margin: 0 1rem;
         padding: 2rem;
     }
     
     .card-icon {
         font-size: 3rem;
+    }
+
+    .enhance-portfolio-card .card-icon {
+        font-size: 3rem; /* Match responsive icon size */
     }
 }
