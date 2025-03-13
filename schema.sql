@@ -55,3 +55,11 @@ CREATE TABLE IF NOT EXISTS projects (
     project_description TEXT,
     FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
 );
+-- Add this to the end of schema.sql
+CREATE TABLE IF NOT EXISTS publications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    portfolio_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,         -- Publication title
+    description TEXT,                    -- Details like journal, year, etc.
+    FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
+);

@@ -59,6 +59,14 @@ $stmt->close();
                     <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
                         <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
                         <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
+                        <option value="temp3" <?php echo $selected_template === 'temp3' ? 'selected' : ''; ?>>Template 3</option>
+                        <option value="temp4" <?php echo $selected_template === 'temp4' ? 'selected' : ''; ?>>Template 4</option>
+                        <option value="temp5" <?php echo $selected_template === 'temp5' ? 'selected' : ''; ?>>Template 5</option>
+                        <option value="temp6" <?php echo $selected_template === 'temp6' ? 'selected' : ''; ?>>Template 6</option>
+                        <option value="temp7" <?php echo $selected_template === 'temp7' ? 'selected' : ''; ?>>Template 7</option>
+                        <option value="temp8" <?php echo $selected_template === 'temp8' ? 'selected' : ''; ?>>Template 8</option>
+                        <option value="temp9" <?php echo $selected_template === 'temp9' ? 'selected' : ''; ?>>Template 9</option>
+                        <option value="temp10" <?php echo $selected_template === 'temp10' ? 'selected' : ''; ?>>Template 10</option>
                     </select>
                     <button type="submit" class="btn btn-primary btn-large">
                         <i class="fas fa-plus"></i> Create New Portfolio
@@ -77,6 +85,14 @@ $stmt->close();
                         <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
                             <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
                             <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
+                            <option value="temp3" <?php echo $selected_template === 'temp3' ? 'selected' : ''; ?>>Template 3</option>
+                            <option value="temp4" <?php echo $selected_template === 'temp4' ? 'selected' : ''; ?>>Template 4</option>
+                            <option value="temp5" <?php echo $selected_template === 'temp5' ? 'selected' : ''; ?>>Template 5</option>
+                            <option value="temp6" <?php echo $selected_template === 'temp6' ? 'selected' : ''; ?>>Template 6</option>
+                            <option value="temp7" <?php echo $selected_template === 'temp7' ? 'selected' : ''; ?>>Template 7</option>
+                            <option value="temp8" <?php echo $selected_template === 'temp8' ? 'selected' : ''; ?>>Template 8</option>
+                            <option value="temp9" <?php echo $selected_template === 'temp9' ? 'selected' : ''; ?>>Template 9</option>
+                            <option value="temp10" <?php echo $selected_template === 'temp10' ? 'selected' : ''; ?>>Template 10</option>
                         </select>
                         <button type="submit" class="btn btn-secondary btn-large">
                             <i class="fas fa-pen"></i> Enhance Existing Portfolio

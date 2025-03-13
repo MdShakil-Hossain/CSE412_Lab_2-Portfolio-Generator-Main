@@ -37,7 +37,6 @@ $result = $stmt->get_result();
 if ($result->num_rows > 0) {
     $portfolio = $result->fetch_assoc();
     $portfolio_id = $portfolio['id'];
-    // Set the session template to the stored template if not already set
     if (!isset($_SESSION['selected_template']) && !empty($portfolio['template_name'])) {
         $_SESSION['selected_template'] = $portfolio['template_name'];
     }
@@ -47,7 +46,6 @@ if ($result->num_rows > 0) {
     $stmt->execute();
     $portfolio_id = $stmt->insert_id;
 
-    // Fetch the newly created portfolio to ensure $portfolio is up to date
     $stmt = $conn->prepare("SELECT * FROM portfolios WHERE id = ?");
     $stmt->bind_param("i", $portfolio_id);
     $stmt->execute();
@@ -55,19 +53,15 @@ if ($result->num_rows > 0) {
     $portfolio = $result->fetch_assoc();
 }
 
-// If no template is selected, redirect to dashboard
 if (!isset($_SESSION['selected_template'])) {
     header('Location: dashboard.php');
     exit;
 }
 
-// Function to sanitize input by removing unwanted characters
 function sanitizeInput($input) {
-    // Remove æç, æ, ç, â€¢, and any other unwanted characters
     return str_replace(['æç', 'æ', 'ç', 'â€¢'], '', $input);
 }
 
-// Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['save_draft']) || isset($_POST['generate_pdf'])) {
         $full_name = sanitizeInput($_POST['full_name'] ?? '');
@@ -82,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $resume_summary = sanitizeInput($_POST['resume_summary'] ?? '');
         $template_name = $_SESSION['selected_template'];
 
-        // Handle photo upload
         if (!empty($_FILES['photo']['name'])) {
             $file = $_FILES['photo'];
             $allowed = ['jpg', 'jpeg', 'png'];
@@ -94,25 +87,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $photo_path = "uploads/portfolio_$portfolio_id.$ext";
                 if (move_uploaded_file($file['tmp_name'], $photo_path)) {
                     $portfolio['photo_path'] = $photo_path;
-                } else {
-                    echo "Failed to move uploaded file. Check permissions for uploads directory.";
                 }
             }
         }
 
-        // Update portfolio in the database
         $stmt = $conn->prepare("UPDATE portfolios SET full_name = ?, job_title = ?, contact_phone = ?, contact_email = ?, address = ?, photo_path = ?, short_bio = ?, soft_skills = ?, technical_skills = ?, languages = ?, resume_summary = ?, template_name = ? WHERE id = ?");
         $stmt->bind_param("ssssssssssssi", $full_name, $job_title, $contact_phone, $contact_email, $address, $portfolio['photo_path'], $short_bio, $soft_skills, $technical_skills, $languages, $resume_summary, $template_name, $portfolio_id);
-        if (!$stmt->execute()) {
-            die("Error updating portfolio: " . $stmt->error);
-        }
+        $stmt->execute();
 
         if (isset($_POST['generate_pdf'])) {
             header('Location: generate_pdf.php');
             exit;
         }
 
-        // Update $portfolio with the new values for display
         $portfolio['full_name'] = $full_name;
         $portfolio['job_title'] = $job_title;
         $portfolio['contact_phone'] = $contact_phone;
@@ -134,58 +121,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($institute && $degree) {
             $stmt = $conn->prepare("INSERT INTO academic_backgrounds (portfolio_id, institute, degree, year, grade) VALUES (?, ?, ?, ?, ?)");
             $stmt->bind_param("issss", $portfolio_id, $institute, $degree, $year, $grade);
-            if (!$stmt->execute()) {
-                die("Error inserting academic background: " . $stmt->error);
-            }
+            $stmt->execute();
         }
-
-        // Update $portfolio with the new values for display
-        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
-        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
-        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
-        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
-        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
-        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
-        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
-        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
-        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
-        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
-        $portfolio['template_name'] = $_SESSION['selected_template'];
     }
 
     if (isset($_POST['add_experience'])) {
-        // Debug: Check submitted data
-        var_dump($_POST['company_name'], $_POST['job_duration'], $_POST['job_responsibilities']);
-        echo "Portfolio ID: $portfolio_id<br>";
-
         $company_name = sanitizeInput($_POST['company_name'] ?? '');
         $job_duration = sanitizeInput($_POST['job_duration'] ?? '');
         $job_responsibilities = sanitizeInput($_POST['job_responsibilities'] ?? '');
-
-        if ($company_name) { // Ensure company_name is not empty
+        if ($company_name) {
             $stmt = $conn->prepare("INSERT INTO work_experiences (portfolio_id, company_name, job_duration, job_responsibilities) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("isss", $portfolio_id, $company_name, $job_duration, $job_responsibilities);
-            if (!$stmt->execute()) {
-                die("Error inserting work experience: " . $stmt->error);
-            } else {
-                echo "Experience added successfully!<br>";
-            }
-        } else {
-            echo "Company name is required to add an experience.<br>";
+            $stmt->execute();
         }
-
-        // Update $portfolio with the new values for display
-        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
-        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
-        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
-        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
-        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
-        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
-        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
-        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
-        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
-        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
-        $portfolio['template_name'] = $_SESSION['selected_template'];
     }
 
     if (isset($_POST['add_project'])) {
@@ -194,30 +142,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($project_title) {
             $stmt = $conn->prepare("INSERT INTO projects (portfolio_id, project_title, project_description) VALUES (?, ?, ?)");
             $stmt->bind_param("iss", $portfolio_id, $project_title, $project_description);
-            if (!$stmt->execute()) {
-                die("Error inserting project: " . $stmt->error);
-            }
+            $stmt->execute();
         }
+    }
 
-        // Update $portfolio with the new values for display
-        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
-        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
-        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
-        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
-        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
-        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
-        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
-        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
-        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
-        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
-        $portfolio['template_name'] = $_SESSION['selected_template'];
+    if (isset($_POST['add_publication'])) {
+        $publication_title = sanitizeInput($_POST['publication_title'] ?? '');
+        $publication_description = sanitizeInput($_POST['publication_description'] ?? '');
+        if ($publication_title) {
+            $stmt = $conn->prepare("INSERT INTO publications (portfolio_id, title, description) VALUES (?, ?, ?)");
+            $stmt->bind_param("iss", $portfolio_id, $publication_title, $publication_description);
+            $stmt->execute();
+        }
     }
 }
 
-// Fetch existing entries
 $academic_backgrounds = $conn->query("SELECT * FROM academic_backgrounds WHERE portfolio_id = $portfolio_id")->fetch_all(MYSQLI_ASSOC);
 $work_experiences = $conn->query("SELECT * FROM work_experiences WHERE portfolio_id = $portfolio_id")->fetch_all(MYSQLI_ASSOC);
 $projects = $conn->query("SELECT * FROM projects WHERE portfolio_id = $portfolio_id")->fetch_all(MYSQLI_ASSOC);
+$publications = $conn->query("SELECT * FROM publications WHERE portfolio_id = $portfolio_id")->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html>
@@ -275,6 +218,14 @@ $projects = $conn->query("SELECT * FROM projects WHERE portfolio_id = $portfolio
         <label>Project Title:</label><input type="text" name="project_title"><br>
         <label>Project Description:</label><textarea name="project_description"></textarea><br>
         <button type="submit" name="add_project">Add Project</button>
+
+        <h3>Publications (Optional)</h3>
+        <?php foreach ($publications as $pub): ?>
+            <p><?php echo htmlspecialchars("{$pub['title']}: {$pub['description']}"); ?></p>
+        <?php endforeach; ?>
+        <label>Publication Title:</label><input type="text" name="publication_title"><br>
+        <label>Publication Description:</label><textarea name="publication_description"></textarea><br>
+        <button type="submit" name="add_publication">Add Publication</button>
 
         <br><br>
         <button type="submit" name="save_draft">Save Draft</button>
