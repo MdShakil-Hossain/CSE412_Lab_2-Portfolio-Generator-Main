@@ -16,15 +16,17 @@ $stmt->bind_result($user_email);
 $stmt->fetch();
 $stmt->close();
 
-// Check if a portfolio exists for the user
+// Check if a portfolio exists for the user and get the template name
 $has_portfolio = false;
-$stmt = $conn->prepare("SELECT COUNT(*) FROM portfolios WHERE user_id = ?");
+$selected_template = 'temp1'; // Default template
+$stmt = $conn->prepare("SELECT template_name FROM portfolios WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$stmt->bind_result($portfolio_count);
-$stmt->fetch();
-if ($portfolio_count > 0) {
+$result = $stmt->get_result();
+if ($result->num_rows > 0) {
     $has_portfolio = true;
+    $portfolio = $result->fetch_assoc();
+    $selected_template = $portfolio['template_name'] ?? 'temp1';
 }
 $stmt->close();
 ?>
@@ -47,28 +49,40 @@ $stmt->close();
 
     <div class="dashboard-container">
         <div class="container">
-            <div class="create-portfolio-card">
-                <div class="card-icon">
-                    <i class="fas fa-rocket"></i>
+            <form method="POST" action="portfolio_edit.php">
+                <div class="create-portfolio-card">
+                    <div class="card-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h2>Select a Template</h2>
+                    <p class="card-description">Choose a template to start building your portfolio.</p>
+                    <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
+                        <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
+                        <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-plus"></i> Create New Portfolio
+                    </button>
                 </div>
-                <h2>Create Your Portfolio</h2>
-                <p class="card-description">Start from scratch and build a professional portfolio that showcases your skills and experience.</p>
-                <a href="portfolio_edit.php" class="btn btn-primary btn-large">
-                    <i class="fas fa-plus"></i> Create New Portfolio
-                </a>
-            </div>
+            </form>
 
             <?php if ($has_portfolio): ?>
-                <div class="enhance-portfolio-card">
-                    <div class="card-icon">
-                        <i class="fas fa-edit"></i>
+                <form method="POST" action="portfolio_edit.php">
+                    <div class="enhance-portfolio-card">
+                        <div class="card-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <h2>Enhance Existing Portfolio</h2>
+                        <p class="card-description">Update or refine your existing portfolio with new details.</p>
+                        <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
+                            <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
+                            <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
+                        </select>
+                        <button type="submit" class="btn btn-secondary btn-large">
+                            <i class="fas fa-pen"></i> Enhance Existing Portfolio
+                        </button>
                     </div>
-                    <h2>Enhance Existing Portfolio</h2>
-                    <p class="card-description">Update or refine your existing portfolio with new details and improvements.</p>
-                    <a href="portfolio_edit.php" class="btn btn-secondary btn-large">
-                        <i class="fas fa-pen"></i> Enhance Existing Portfolio
-                    </a>
-                </div>
+                </form>
             <?php endif; ?>
         </div>
     </div>

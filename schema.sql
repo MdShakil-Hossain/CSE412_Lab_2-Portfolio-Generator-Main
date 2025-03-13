@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     experience TEXT,                     -- Added for experience
     languages TEXT,                      -- Added for languages
     resume_summary TEXT,                 -- Added for resume summary
+    template_name VARCHAR(20) DEFAULT 'temp1', -- Added to store the selected template (e.g., 'temp1', 'temp2')
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

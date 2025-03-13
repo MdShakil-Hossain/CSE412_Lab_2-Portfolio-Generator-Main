@@ -8,6 +8,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
+
+// Store the selected template in the session if provided
+if (isset($_POST['template'])) {
+    $_SESSION['selected_template'] = $_POST['template'];
+}
+
 $portfolio = [
     'full_name' => '',
     'job_title' => '',
@@ -18,9 +24,9 @@ $portfolio = [
     'short_bio' => '',
     'soft_skills' => '',
     'technical_skills' => '',
-    'experience' => '',
     'languages' => '',
-    'resume_summary' => ''
+    'resume_summary' => '',
+    'template_name' => 'temp1' // Default template
 ];
 
 // Check if portfolio exists
@@ -31,27 +37,50 @@ $result = $stmt->get_result();
 if ($result->num_rows > 0) {
     $portfolio = $result->fetch_assoc();
     $portfolio_id = $portfolio['id'];
+    // Set the session template to the stored template if not already set
+    if (!isset($_SESSION['selected_template']) && !empty($portfolio['template_name'])) {
+        $_SESSION['selected_template'] = $portfolio['template_name'];
+    }
 } else {
     $stmt = $conn->prepare("INSERT INTO portfolios (user_id) VALUES (?)");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $portfolio_id = $stmt->insert_id;
+
+    // Fetch the newly created portfolio to ensure $portfolio is up to date
+    $stmt = $conn->prepare("SELECT * FROM portfolios WHERE id = ?");
+    $stmt->bind_param("i", $portfolio_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $portfolio = $result->fetch_assoc();
+}
+
+// If no template is selected, redirect to dashboard
+if (!isset($_SESSION['selected_template'])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
+// Function to sanitize input by removing unwanted characters
+function sanitizeInput($input) {
+    // Remove æç, æ, ç, â€¢, and any other unwanted characters
+    return str_replace(['æç', 'æ', 'ç', 'â€¢'], '', $input);
 }
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['save_draft']) || isset($_POST['generate_pdf'])) {
-        $full_name = $_POST['full_name'] ?? '';
-        $job_title = $_POST['job_title'] ?? '';
-        $contact_phone = $_POST['contact_phone'] ?? '';
-        $contact_email = $_POST['contact_email'] ?? '';
-        $address = $_POST['address'] ?? '';
-        $short_bio = $_POST['short_bio'] ?? '';
-        $soft_skills = $_POST['soft_skills'] ?? '';
-        $technical_skills = $_POST['technical_skills'] ?? '';
-        $experience = $_POST['experience'] ?? ''; // Fixed: Use ?? to avoid undefined key
-        $languages = $_POST['languages'] ?? '';   // Fixed: Use ?? to avoid undefined key
-        $resume_summary = $_POST['resume_summary'] ?? ''; // Fixed: Use ?? to avoid undefined key
+        $full_name = sanitizeInput($_POST['full_name'] ?? '');
+        $job_title = sanitizeInput($_POST['job_title'] ?? '');
+        $contact_phone = sanitizeInput($_POST['contact_phone'] ?? '');
+        $contact_email = sanitizeInput($_POST['contact_email'] ?? '');
+        $address = sanitizeInput($_POST['address'] ?? '');
+        $short_bio = sanitizeInput($_POST['short_bio'] ?? '');
+        $soft_skills = sanitizeInput($_POST['soft_skills'] ?? '');
+        $technical_skills = sanitizeInput($_POST['technical_skills'] ?? '');
+        $languages = sanitizeInput($_POST['languages'] ?? '');
+        $resume_summary = sanitizeInput($_POST['resume_summary'] ?? '');
+        $template_name = $_SESSION['selected_template'];
 
         // Handle photo upload
         if (!empty($_FILES['photo']['name'])) {
@@ -71,16 +100,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        $stmt = $conn->prepare("UPDATE portfolios SET full_name = ?, job_title = ?, contact_phone = ?, contact_email = ?, address = ?, photo_path = ?, short_bio = ?, soft_skills = ?, technical_skills = ?, experience = ?, languages = ?, resume_summary = ? WHERE id = ?");
-        $stmt->bind_param("ssssssssssssi", $full_name, $job_title, $contact_phone, $contact_email, $address, $portfolio['photo_path'], $short_bio, $soft_skills, $technical_skills, $experience, $languages, $resume_summary, $portfolio_id);
-        $stmt->execute();
+        // Update portfolio in the database
+        $stmt = $conn->prepare("UPDATE portfolios SET full_name = ?, job_title = ?, contact_phone = ?, contact_email = ?, address = ?, photo_path = ?, short_bio = ?, soft_skills = ?, technical_skills = ?, languages = ?, resume_summary = ?, template_name = ? WHERE id = ?");
+        $stmt->bind_param("ssssssssssssi", $full_name, $job_title, $contact_phone, $contact_email, $address, $portfolio['photo_path'], $short_bio, $soft_skills, $technical_skills, $languages, $resume_summary, $template_name, $portfolio_id);
+        if (!$stmt->execute()) {
+            die("Error updating portfolio: " . $stmt->error);
+        }
 
         if (isset($_POST['generate_pdf'])) {
             header('Location: generate_pdf.php');
             exit;
         }
 
-        // Update portfolio array to reflect saved values
+        // Update $portfolio with the new values for display
         $portfolio['full_name'] = $full_name;
         $portfolio['job_title'] = $job_title;
         $portfolio['contact_phone'] = $contact_phone;
@@ -89,84 +121,96 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $portfolio['short_bio'] = $short_bio;
         $portfolio['soft_skills'] = $soft_skills;
         $portfolio['technical_skills'] = $technical_skills;
-        $portfolio['experience'] = $experience;
         $portfolio['languages'] = $languages;
         $portfolio['resume_summary'] = $resume_summary;
+        $portfolio['template_name'] = $template_name;
     }
 
-    // Handle academic background (separate submission)
     if (isset($_POST['add_academic'])) {
-        $institute = $_POST['institute'] ?? '';
-        $degree = $_POST['degree'] ?? '';
-        $year = $_POST['year'] ?? '';
-        $grade = $_POST['grade'] ?? '';
-        if ($institute && $degree) { // Ensure required fields are filled
+        $institute = sanitizeInput($_POST['institute'] ?? '');
+        $degree = sanitizeInput($_POST['degree'] ?? '');
+        $year = sanitizeInput($_POST['year'] ?? '');
+        $grade = sanitizeInput($_POST['grade'] ?? '');
+        if ($institute && $degree) {
             $stmt = $conn->prepare("INSERT INTO academic_backgrounds (portfolio_id, institute, degree, year, grade) VALUES (?, ?, ?, ?, ?)");
             $stmt->bind_param("issss", $portfolio_id, $institute, $degree, $year, $grade);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                die("Error inserting academic background: " . $stmt->error);
+            }
         }
 
-        // Preserve other form values
-        $portfolio['full_name'] = $_POST['full_name'] ?? $portfolio['full_name'];
-        $portfolio['job_title'] = $_POST['job_title'] ?? $portfolio['job_title'];
-        $portfolio['contact_phone'] = $_POST['contact_phone'] ?? $portfolio['contact_phone'];
-        $portfolio['contact_email'] = $_POST['contact_email'] ?? $portfolio['contact_email'];
-        $portfolio['address'] = $_POST['address'] ?? $portfolio['address'];
-        $portfolio['short_bio'] = $_POST['short_bio'] ?? $portfolio['short_bio'];
-        $portfolio['soft_skills'] = $_POST['soft_skills'] ?? $portfolio['soft_skills'];
-        $portfolio['technical_skills'] = $_POST['technical_skills'] ?? $portfolio['technical_skills'];
-        $portfolio['experience'] = $_POST['experience'] ?? $portfolio['experience'];
-        $portfolio['languages'] = $_POST['languages'] ?? $portfolio['languages'];
-        $portfolio['resume_summary'] = $_POST['resume_summary'] ?? $portfolio['resume_summary'];
+        // Update $portfolio with the new values for display
+        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
+        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
+        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
+        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
+        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
+        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
+        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
+        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
+        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
+        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
+        $portfolio['template_name'] = $_SESSION['selected_template'];
     }
 
-    // Handle work experience
     if (isset($_POST['add_experience'])) {
-        $company_name = $_POST['company_name'] ?? '';
-        $job_duration = $_POST['job_duration'] ?? '';
-        $job_responsibilities = $_POST['job_responsibilities'] ?? '';
-        if ($company_name) { // Ensure required field is filled
+        // Debug: Check submitted data
+        var_dump($_POST['company_name'], $_POST['job_duration'], $_POST['job_responsibilities']);
+        echo "Portfolio ID: $portfolio_id<br>";
+
+        $company_name = sanitizeInput($_POST['company_name'] ?? '');
+        $job_duration = sanitizeInput($_POST['job_duration'] ?? '');
+        $job_responsibilities = sanitizeInput($_POST['job_responsibilities'] ?? '');
+
+        if ($company_name) { // Ensure company_name is not empty
             $stmt = $conn->prepare("INSERT INTO work_experiences (portfolio_id, company_name, job_duration, job_responsibilities) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("isss", $portfolio_id, $company_name, $job_duration, $job_responsibilities);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                die("Error inserting work experience: " . $stmt->error);
+            } else {
+                echo "Experience added successfully!<br>";
+            }
+        } else {
+            echo "Company name is required to add an experience.<br>";
         }
 
-        // Preserve other form values
-        $portfolio['full_name'] = $_POST['full_name'] ?? $portfolio['full_name'];
-        $portfolio['job_title'] = $_POST['job_title'] ?? $portfolio['job_title'];
-        $portfolio['contact_phone'] = $_POST['contact_phone'] ?? $portfolio['contact_phone'];
-        $portfolio['contact_email'] = $_POST['contact_email'] ?? $portfolio['contact_email'];
-        $portfolio['address'] = $_POST['address'] ?? $portfolio['address'];
-        $portfolio['short_bio'] = $_POST['short_bio'] ?? $portfolio['short_bio'];
-        $portfolio['soft_skills'] = $_POST['soft_skills'] ?? $portfolio['soft_skills'];
-        $portfolio['technical_skills'] = $_POST['technical_skills'] ?? $portfolio['technical_skills'];
-        $portfolio['experience'] = $_POST['experience'] ?? $portfolio['experience'];
-        $portfolio['languages'] = $_POST['languages'] ?? $portfolio['languages'];
-        $portfolio['resume_summary'] = $_POST['resume_summary'] ?? $portfolio['resume_summary'];
+        // Update $portfolio with the new values for display
+        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
+        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
+        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
+        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
+        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
+        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
+        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
+        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
+        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
+        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
+        $portfolio['template_name'] = $_SESSION['selected_template'];
     }
 
-    // Handle projects
     if (isset($_POST['add_project'])) {
-        $project_title = $_POST['project_title'] ?? '';
-        $project_description = $_POST['project_description'] ?? '';
-        if ($project_title) { // Ensure required field is filled
+        $project_title = sanitizeInput($_POST['project_title'] ?? '');
+        $project_description = sanitizeInput($_POST['project_description'] ?? '');
+        if ($project_title) {
             $stmt = $conn->prepare("INSERT INTO projects (portfolio_id, project_title, project_description) VALUES (?, ?, ?)");
             $stmt->bind_param("iss", $portfolio_id, $project_title, $project_description);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                die("Error inserting project: " . $stmt->error);
+            }
         }
 
-        // Preserve other form values
-        $portfolio['full_name'] = $_POST['full_name'] ?? $portfolio['full_name'];
-        $portfolio['job_title'] = $_POST['job_title'] ?? $portfolio['job_title'];
-        $portfolio['contact_phone'] = $_POST['contact_phone'] ?? $portfolio['contact_phone'];
-        $portfolio['contact_email'] = $_POST['contact_email'] ?? $portfolio['contact_email'];
-        $portfolio['address'] = $_POST['address'] ?? $portfolio['address'];
-        $portfolio['short_bio'] = $_POST['short_bio'] ?? $portfolio['short_bio'];
-        $portfolio['soft_skills'] = $_POST['soft_skills'] ?? $portfolio['soft_skills'];
-        $portfolio['technical_skills'] = $_POST['technical_skills'] ?? $portfolio['technical_skills'];
-        $portfolio['experience'] = $_POST['experience'] ?? $portfolio['experience'];
-        $portfolio['languages'] = $_POST['languages'] ?? $portfolio['languages'];
-        $portfolio['resume_summary'] = $_POST['resume_summary'] ?? $portfolio['resume_summary'];
+        // Update $portfolio with the new values for display
+        $portfolio['full_name'] = sanitizeInput($_POST['full_name'] ?? $portfolio['full_name']);
+        $portfolio['job_title'] = sanitizeInput($_POST['job_title'] ?? $portfolio['job_title']);
+        $portfolio['contact_phone'] = sanitizeInput($_POST['contact_phone'] ?? $portfolio['contact_phone']);
+        $portfolio['contact_email'] = sanitizeInput($_POST['contact_email'] ?? $portfolio['contact_email']);
+        $portfolio['address'] = sanitizeInput($_POST['address'] ?? $portfolio['address']);
+        $portfolio['short_bio'] = sanitizeInput($_POST['short_bio'] ?? $portfolio['short_bio']);
+        $portfolio['soft_skills'] = sanitizeInput($_POST['soft_skills'] ?? $portfolio['soft_skills']);
+        $portfolio['technical_skills'] = sanitizeInput($_POST['technical_skills'] ?? $portfolio['technical_skills']);
+        $portfolio['languages'] = sanitizeInput($_POST['languages'] ?? $portfolio['languages']);
+        $portfolio['resume_summary'] = sanitizeInput($_POST['resume_summary'] ?? $portfolio['resume_summary']);
+        $portfolio['template_name'] = $_SESSION['selected_template'];
     }
 }
 
@@ -180,9 +224,10 @@ $projects = $conn->query("SELECT * FROM projects WHERE portfolio_id = $portfolio
 <head>
     <title>Edit Portfolio</title>
     <link rel="stylesheet" href="assets/style.css">
+    <meta charset="UTF-8">
 </head>
 <body>
-    <h2><?php echo $portfolio['id'] ? 'Edit' : 'Create'; ?> Portfolio</h2>
+    <h2><?php echo !empty($portfolio['id']) ? 'Edit' : 'Create'; ?> Portfolio (Template: <?php echo htmlspecialchars($_SESSION['selected_template']); ?>)</h2>
     <form method="POST" enctype="multipart/form-data">
         <h3>Personal Information</h3>
         <label>Full Name:</label><input type="text" name="full_name" value="<?php echo htmlspecialchars($portfolio['full_name']); ?>" required><br>
@@ -204,81 +249,36 @@ $projects = $conn->query("SELECT * FROM projects WHERE portfolio_id = $portfolio
         <h3>Resume Summary/Objective (Optional)</h3>
         <label>Summary/Objective:</label><textarea name="resume_summary"><?php echo htmlspecialchars($portfolio['resume_summary'] ?? ''); ?></textarea><br>
 
-        <br><br>
-        <button type="submit" name="save_draft">Save Draft</button>
-        <button type="submit" name="generate_pdf">Generate PDF</button>
-    </form>
-
-    <!-- Separate form for Academic Background -->
-    <h3>Academic Background</h3>
-    <?php foreach ($academic_backgrounds as $ab): ?>
-        <p><?php echo htmlspecialchars("{$ab['institute']}, {$ab['degree']}, {$ab['year']}, {$ab['grade']}"); ?></p>
-    <?php endforeach; ?>
-    <form method="POST">
-        <!-- Hidden fields to preserve other form values -->
-        <input type="hidden" name="full_name" value="<?php echo htmlspecialchars($portfolio['full_name']); ?>">
-        <input type="hidden" name="job_title" value="<?php echo htmlspecialchars($portfolio['job_title'] ?? ''); ?>">
-        <input type="hidden" name="contact_phone" value="<?php echo htmlspecialchars($portfolio['contact_phone'] ?? ''); ?>">
-        <input type="hidden" name="contact_email" value="<?php echo htmlspecialchars($portfolio['contact_email'] ?? ''); ?>">
-        <input type="hidden" name="address" value="<?php echo htmlspecialchars($portfolio['address'] ?? ''); ?>">
-        <input type="hidden" name="short_bio" value="<?php echo htmlspecialchars($portfolio['short_bio'] ?? ''); ?>">
-        <input type="hidden" name="soft_skills" value="<?php echo htmlspecialchars($portfolio['soft_skills'] ?? ''); ?>">
-        <input type="hidden" name="technical_skills" value="<?php echo htmlspecialchars($portfolio['technical_skills'] ?? ''); ?>">
-        <input type="hidden" name="languages" value="<?php echo htmlspecialchars($portfolio['languages'] ?? ''); ?>">
-        <input type="hidden" name="resume_summary" value="<?php echo htmlspecialchars($portfolio['resume_summary'] ?? ''); ?>">
-
-        <label>Institute:</label><input type="text" name="institute" required><br>
-        <label>Degree:</label><input type="text" name="degree" required><br>
+        <h3>Academic Background</h3>
+        <?php foreach ($academic_backgrounds as $ab): ?>
+            <p><?php echo htmlspecialchars("{$ab['institute']}, {$ab['degree']}, {$ab['year']}, {$ab['grade']}"); ?></p>
+        <?php endforeach; ?>
+        <label>Institute:</label><input type="text" name="institute"><br>
+        <label>Degree:</label><input type="text" name="degree"><br>
         <label>Year:</label><input type="text" name="year"><br>
         <label>Grade:</label><input type="text" name="grade"><br>
         <button type="submit" name="add_academic">Add Academic Background</button>
-    </form>
 
-    <!-- Separate form for Work Experience -->
-    <h3>Experience (Optional)</h3>
-    <?php foreach ($work_experiences as $exp): ?>
-        <p><?php echo htmlspecialchars("{$exp['company_name']}, {$exp['job_duration']}: {$exp['job_responsibilities']}"); ?></p>
-    <?php endforeach; ?>
-    <form method="POST">
-        <!-- Hidden fields to preserve other form values -->
-        <input type="hidden" name="full_name" value="<?php echo htmlspecialchars($portfolio['full_name']); ?>">
-        <input type="hidden" name="job_title" value="<?php echo htmlspecialchars($portfolio['job_title'] ?? ''); ?>">
-        <input type="hidden" name="contact_phone" value="<?php echo htmlspecialchars($portfolio['contact_phone'] ?? ''); ?>">
-        <input type="hidden" name="contact_email" value="<?php echo htmlspecialchars($portfolio['contact_email'] ?? ''); ?>">
-        <input type="hidden" name="address" value="<?php echo htmlspecialchars($portfolio['address'] ?? ''); ?>">
-        <input type="hidden" name="short_bio" value="<?php echo htmlspecialchars($portfolio['short_bio'] ?? ''); ?>">
-        <input type="hidden" name="soft_skills" value="<?php echo htmlspecialchars($portfolio['soft_skills'] ?? ''); ?>">
-        <input type="hidden" name="technical_skills" value="<?php echo htmlspecialchars($portfolio['technical_skills'] ?? ''); ?>">
-        <input type="hidden" name="languages" value="<?php echo htmlspecialchars($portfolio['languages'] ?? ''); ?>">
-        <input type="hidden" name="resume_summary" value="<?php echo htmlspecialchars($portfolio['resume_summary'] ?? ''); ?>">
-
+        <h3>Experience (Optional)</h3>
+        <?php foreach ($work_experiences as $exp): ?>
+            <p><?php echo htmlspecialchars("{$exp['company_name']}, {$exp['job_duration']}: {$exp['job_responsibilities']}"); ?></p>
+        <?php endforeach; ?>
         <label>Company Name:</label><input type="text" name="company_name"><br>
         <label>Job Duration:</label><input type="text" name="job_duration"><br>
         <label>Job Responsibilities:</label><textarea name="job_responsibilities"></textarea><br>
         <button type="submit" name="add_experience">Add Experience</button>
-    </form>
 
-    <!-- Separate form for Projects -->
-    <h3>Projects (Optional)</h3>
-    <?php foreach ($projects as $proj): ?>
-        <p><?php echo htmlspecialchars("{$proj['project_title']}: {$proj['project_description']}"); ?></p>
-    <?php endforeach; ?>
-    <form method="POST">
-        <!-- Hidden fields to preserve other form values -->
-        <input type="hidden" name="full_name" value="<?php echo htmlspecialchars($portfolio['full_name']); ?>">
-        <input type="hidden" name="job_title" value="<?php echo htmlspecialchars($portfolio['job_title'] ?? ''); ?>">
-        <input type="hidden" name="contact_phone" value="<?php echo htmlspecialchars($portfolio['contact_phone'] ?? ''); ?>">
-        <input type="hidden" name="contact_email" value="<?php echo htmlspecialchars($portfolio['contact_email'] ?? ''); ?>">
-        <input type="hidden" name="address" value="<?php echo htmlspecialchars($portfolio['address'] ?? ''); ?>">
-        <input type="hidden" name="short_bio" value="<?php echo htmlspecialchars($portfolio['short_bio'] ?? ''); ?>">
-        <input type="hidden" name="soft_skills" value="<?php echo htmlspecialchars($portfolio['soft_skills'] ?? ''); ?>">
-        <input type="hidden" name="technical_skills" value="<?php echo htmlspecialchars($portfolio['technical_skills'] ?? ''); ?>">
-        <input type="hidden" name="languages" value="<?php echo htmlspecialchars($portfolio['languages'] ?? ''); ?>">
-        <input type="hidden" name="resume_summary" value="<?php echo htmlspecialchars($portfolio['resume_summary'] ?? ''); ?>">
-
+        <h3>Projects (Optional)</h3>
+        <?php foreach ($projects as $proj): ?>
+            <p><?php echo htmlspecialchars("{$proj['project_title']}: {$proj['project_description']}"); ?></p>
+        <?php endforeach; ?>
         <label>Project Title:</label><input type="text" name="project_title"><br>
         <label>Project Description:</label><textarea name="project_description"></textarea><br>
         <button type="submit" name="add_project">Add Project</button>
+
+        <br><br>
+        <button type="submit" name="save_draft">Save Draft</button>
+        <button type="submit" name="generate_pdf">Generate PDF</button>
     </form>
 
     <p><a href="dashboard.php">Back to Dashboard</a></p>
