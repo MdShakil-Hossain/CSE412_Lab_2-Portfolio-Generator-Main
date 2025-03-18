@@ -1,154 +1,137 @@
 <?php
 class PDF_Temp5 extends FPDF {
     protected $portfolio;
-    private $leftWidth = 63; // 30% of 210mm (A4 width)
-    private $rightWidth = 147; // 70% of 210mm
-    private $margin = 10; // Uniform margin of 10mm on left, right, and top
 
     public function Header() {
-        // No header content
+        $this->SetFillColor(0, 51, 102);
+        $this->Rect(0, 0, 210, 30, 'F');
+        $this->SetFont('Arial', 'B', 18);
+        $this->SetTextColor(255, 255, 255);
+        $this->SetXY(15, 8);
+        $this->Cell(0, 8, strtoupper($this->portfolio['full_name'] ?? 'FULL NAME'), 0, 1, 'L');
+        $this->SetFont('Arial', '', 10);
+        $this->SetXY(15, 18);
+        $this->Cell(0, 6, $this->portfolio['job_title'] ?? 'PROFESSIONAL TITLE', 0, 1, 'L');
     }
 
     public function Footer() {
-        // No footer content
+        // Removed footer to save space
     }
 
-    public function ChapterTitle($title) {
+    public function SectionTitle($title) {
         $this->SetFont('Arial', 'B', 12);
-        $this->SetTextColor(0, 102, 204); // Blue for section titles
-        $this->Cell(0, 8, strtoupper($title), 0, 1, 'L');
+        $this->SetTextColor(0, 51, 102);
+        $this->Cell(0, 7, strtoupper($title), 'B', 1, 'L');
         $this->SetTextColor(0, 0, 0);
-        $this->Ln(2);
+        $this->Ln(3); // Reduced from 4 to save space
     }
 
     public function generate($portfolio, $academic_backgrounds, $work_experiences, $projects, $publications) {
         $this->portfolio = $portfolio;
         $this->AddPage('P', 'A4');
-        $this->SetMargins($this->margin, $this->margin, $this->margin); // Set uniform margins
+        $this->SetMargins(15, 30, 15);
 
-        // Left Column (30%) - Personal Information
-        $leftX = $this->margin; // Start at left margin
-        $leftY = $this->margin; // Start at top margin
+        // Contact section
+        $this->SetFont('Arial', '', 10);
+        $contact = "Phone: " . ($portfolio['contact_phone'] ?? 'N/A') . "\n" .
+                   "Email: " . ($portfolio['contact_email'] ?? 'N/A') . "\n" .
+                   "Address: " . ($portfolio['address'] ?? 'Your Street Address');
+        $this->SetXY(15, 35);
+        $this->SetFillColor(245, 245, 245);
+        $this->Rect(15, 35, 115, 50, 'F'); // Adjusted width to 115 to accommodate image at 150
+        $this->SetXY(17, 37);
+        $this->MultiCell(111, 5, $contact, 0, 'L'); // Adjusted width accordingly
 
-        // Place image at top-left of left column
-        if ($this->portfolio['photo_path'] && file_exists($this->portfolio['photo_path'])) {
-            $imageWidth = 30;
-            $imageHeight = 40;
-            $this->Image($this->portfolio['photo_path'], $leftX, $leftY, $imageWidth, $imageHeight);
-            $this->SetLineWidth(0.2);
-            $this->SetDrawColor(150, 150, 150);
-            $this->Rect($leftX, $leftY, $imageWidth, $imageHeight);
-            $leftY += $imageHeight + 5; // Move down after image
+        // Image on right side with left margin at 150mm
+        if ($portfolio['photo_path'] && file_exists($portfolio['photo_path'])) {
+            $this->Image($portfolio['photo_path'], 150, 35, 40, 40); // Changed from 180 to 150
+            $this->SetDrawColor(0, 51, 102);
+            $this->SetLineWidth(0.3);
+            $this->Rect(150, 35, 40, 40); // Changed from 180 to 150
         }
 
-        // Full Name and Job Title
-        $this->SetXY($leftX, $leftY);
-        $this->SetFont('Arial', 'B', 16);
-        $this->MultiCell($this->leftWidth, 8, strtoupper($this->portfolio['full_name'] ?? 'FULL NAME'), 0, 'L');
-        $this->SetFont('Arial', 'I', 12);
-        $this->MultiCell($this->leftWidth, 6, $this->portfolio['job_title'] ?? 'JOB TITLE', 0, 'L');
-        $leftY = $this->GetY() + 10; // Add 10mm space after job title
+        // Content starts below contact/photo
+        $this->SetXY(15, 90);
+        $contentWidth = 180; // Adjusted for right margin
 
-        // Contact Phone, Email, and Address
-        $this->SetXY($leftX, $leftY);
-        $this->SetFont('Arial', '', 10);
-        $contact = "Phone: " . ($this->portfolio['contact_phone'] ?? 'N/A') . "\n" .
-                   "Email: " . ($this->portfolio['contact_email'] ?? 'N/A') . "\n" .
-                   "Address: " . ($this->portfolio['address'] ?? 'N/A');
-        $this->MultiCell($this->leftWidth, 6, $contact, 0, 'L');
+        // Profile
+        $this->SectionTitle('Profile');
+        $this->SetFont('Arial', '', 9);
+        $this->MultiCell($contentWidth, 4, substr($portfolio['resume_summary'] ?? $portfolio['short_bio'] ?? 'Lorem ipsum dolor sit amet...', 0, 200) . '...', 0, 'J');
+        $this->Ln(6); // Added space between sections
 
-        // Right Column (70%) - All Content Sections
-        $yPosRight = $this->margin; // Start at top-right with margin
-        $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight); // 5mm gap between columns
-
-        // Resume Summary/Objective
-        $this->ChapterTitle('Summary');
-        $this->SetFont('Arial', '', 10);
-        $this->MultiCell($this->rightWidth, 5, $this->portfolio['resume_summary'] ?? $this->portfolio['short_bio'] ?? 'No summary provided.', 0, 'J');
-        $this->Ln(5);
-        $yPosRight = $this->GetY();
-
-        // Academic Background
-        $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-        $this->ChapterTitle('Education');
-        $this->SetFont('Arial', '', 10);
+        // Education
+        $this->SectionTitle('Education');
+        $this->SetFont('Arial', '', 9);
         if (!empty($academic_backgrounds)) {
+            $count = 0;
             foreach ($academic_backgrounds as $ab) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell($this->rightWidth, 5, ($ab['degree'] ?? 'Unknown Degree') . ' | ' . ($ab['institute'] ?? 'Unknown Institute'), 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->Cell($this->rightWidth, 5, $ab['year'] ?? 'Unknown Year', 0, 1, 'L');
-                $this->Ln(2);
+                if ($count++ >= 2) break;
+                $this->Cell(30, 5, $ab['year'], 0, 0);
+                $this->SetFont('Arial', 'B', 9);
+                $this->Cell(0, 5, substr($ab['degree'], 0, 50), 0, 1);
+                $this->SetFont('Arial', '', 9);
+                $this->Cell(0, 5, substr($ab['institute'], 0, 60), 0, 1);
             }
-        } else {
-            $this->SetFont('Arial', 'B', 10);
-            $this->Cell($this->rightWidth, 5, 'Degree | Institute', 0, 1, 'L');
-            $this->SetFont('Arial', '', 10);
-            $this->Cell($this->rightWidth, 5, 'Year', 0, 1, 'L');
         }
-        $yPosRight = $this->GetY();
-
-        // Work Experience
-        if (!empty($work_experiences)) {
-            $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-            $this->ChapterTitle('Experience');
-            $this->SetFont('Arial', '', 10);
-            foreach ($work_experiences as $exp) {
-                $this->SetFont('Arial', 'B', 10);
-                $companyName = $exp['company_name'] ?? 'Unknown Company';
-                $this->Cell($this->rightWidth, 5, $companyName, 0, 1, 'L');
-                $this->SetFont('Arial', 'I', 10);
-                $this->Cell($this->rightWidth, 5, $exp['job_duration'] ?? 'Unknown Duration', 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell($this->rightWidth, 5, '- ' . ($exp['job_responsibilities'] ?? 'No responsibilities provided'), 0, 'J');
-                $this->Ln(3);
-            }
-            $yPosRight = $this->GetY();
-        }
+        $this->Ln(6); // Added space between sections
 
         // Skills
-        $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-        $this->ChapterTitle('Skills');
-        $this->SetFont('Arial', '', 10);
-        $skills = str_replace("\n", "\n- ", "- " . trim($this->portfolio['technical_skills'] ?? $this->portfolio['soft_skills'] ?? 'No skills provided'));
-        $this->MultiCell($this->rightWidth, 5, $skills, 0, 'L');
-        $yPosRight = $this->GetY();
+        $this->SectionTitle('Skills');
+        $this->SetFont('Arial', '', 9);
+        $skills = explode("\n", trim($portfolio['technical_skills'] ?? 'Photoshop\nIllustrator\nInDesign'));
+        $count = 0;
+        foreach ($skills as $skill) {
+            if ($count++ >= 5) break;
+            $this->Cell(0, 4, '• ' . substr($skill, 0, 50), 0, 1);
+        }
+        $this->Ln(6); // Added space between sections
 
-        // Languages
-        $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-        $this->ChapterTitle('Languages');
-        $this->SetFont('Arial', '', 10);
-        $languages = str_replace("\n", "\n- ", "- " . trim($this->portfolio['languages'] ?? 'No languages provided'));
-        $this->MultiCell($this->rightWidth, 5, $languages, 0, 'L');
-        $yPosRight = $this->GetY();
-
-        // Projects (Optional)
-        if (!empty($projects)) {
-            $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-            $this->ChapterTitle('Projects');
-            $this->SetFont('Arial', '', 10);
-            foreach ($projects as $proj) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell($this->rightWidth, 5, $proj['project_title'] ?? 'Unknown Project', 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell($this->rightWidth, 5, $proj['project_description'] ?? 'No description provided', 0, 'J');
-                $this->Ln(3);
+        // Experience
+        if (!empty($work_experiences)) {
+            $this->SectionTitle('Experience');
+            $this->SetFont('Arial', '', 9);
+            $count = 0;
+            foreach ($work_experiences as $exp) {
+                if ($count++ >= 2) break;
+                $this->SetFont('Arial', 'B', 9);
+                $this->Cell(0, 5, $exp['job_duration'], 0, 1);
+                $this->SetFont('Arial', 'I', 9);
+                $this->Cell(0, 5, substr($exp['company_name'], 0, 60), 0, 1);
+                $this->SetFont('Arial', '', 9);
+                $this->MultiCell($contentWidth, 4, substr($exp['job_responsibilities'], 0, 150) . '...', 0, 'J');
             }
-            $yPosRight = $this->GetY();
+            $this->Ln(6); // Added space between sections
         }
 
-        // Publications (Optional)
-        if (!empty($publications)) {
-            $this->SetXY($this->margin + $this->leftWidth + 5, $yPosRight);
-            $this->ChapterTitle('Publications');
-            $this->SetFont('Arial', '', 10);
-            foreach ($publications as $pub) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell($this->rightWidth, 5, $pub['title'] ?? 'Unknown Publication', 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell($this->rightWidth, 5, $pub['description'] ?? 'No description provided', 0, 'J');
-                $this->Ln(3);
+        // Projects
+        if (!empty($projects)) {
+            $this->SectionTitle('Projects');
+            $this->SetFont('Arial', '', 9);
+            $count = 0;
+            foreach ($projects as $proj) {
+                if ($count++ >= 2) break;
+                $this->SetFont('Arial', 'B', 9);
+                $this->Cell(0, 5, substr($proj['project_title'], 0, 60), 0, 1);
+                $this->SetFont('Arial', '', 9);
+                $this->MultiCell($contentWidth, 4, substr($proj['project_description'], 0, 150) . '...', 0, 'J');
             }
+            $this->Ln(6); // Added space between sections
+        }
+
+        // Publications
+        if (!empty($publications)) {
+            $this->SectionTitle('Publications');
+            $this->SetFont('Arial', '', 9);
+            $count = 0;
+            foreach ($publications as $pub) {
+                if ($count++ >= 2) break;
+                $this->SetFont('Arial', 'I', 9);
+                $this->Cell(0, 5, substr($pub['title'], 0, 60), 0, 1);
+                $this->SetFont('Arial', '', 9);
+                $this->MultiCell($contentWidth, 4, substr($pub['description'], 0, 150) . '...', 0, 'J');
+            }
+            $this->Ln(6); // Added space between sections
         }
     }
 }

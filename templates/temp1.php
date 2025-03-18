@@ -2,165 +2,169 @@
 class PDF_Temp1 extends FPDF {
     protected $portfolio;
 
-
     public function Header() {
-        $this->SetFont('Arial', 'B', 20);
-        $this->SetTextColor(0, 51, 102);
-        $this->Cell(0, 15, strtoupper($this->portfolio['full_name'] ?? 'FULL NAME'), 0, 1, 'C');
-        $this->SetFont('Arial', 'I', 12);
-        $this->SetTextColor(100, 100, 100);
-        $this->Cell(0, 8, $this->portfolio['job_title'] ?? 'PROFESSIONAL TITLE', 0, 1, 'C');
-        $this->SetTextColor(0, 0, 0);
-        $this->Ln(10);
+        // No header content as we'll handle it in generate()
     }
-
 
     public function Footer() {
         $this->SetY(-15);
-        $this->SetFont('Arial', 'I', 8);
-        $this->SetTextColor(150, 150, 150);
+        $this->SetFont('Times', 'I', 8);
+        $this->SetTextColor(150, 150, 150); // Gray color for footer
         $this->Cell(0, 10, 'Page ' . $this->PageNo(), 0, 0, 'C');
     }
 
-
     public function ChapterTitle($title) {
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor(230, 230, 230);
-        $this->SetTextColor(0, 51, 102);
-        $this->Cell(0, 8, strtoupper($title), 0, 1, 'L', true);
-        $this->SetTextColor(0, 0, 0);
-        $this->Ln(2);
+        $this->SetFont('Helvetica', 'B', 14);
+        $this->SetTextColor(0, 0, 128); // Navy blue for titles
+        $this->Cell(80, 8, strtoupper($title), 0, 1, 'L'); // Left-aligned
+        $this->SetLineWidth(0.5); // Bold line
+        $this->SetDrawColor(0, 0, 128); // Navy blue line
+        $this->Line(68, $this->GetY(), 210 - 15, $this->GetY()); // Line spans full 70% width (68mm to 195mm)
+        $this->Ln(2); // Spacing after line
     }
-
-
-    public function getNumLines($text) {
-        $lines = explode("\n", $text);
-        return count($lines);
-    }
-
 
     public function generate($portfolio, $academic_backgrounds, $work_experiences, $projects, $publications) {
         $this->portfolio = $portfolio;
         $this->AddPage('P', 'A4');
-        $this->SetMargins(20, 20, 20);
+        $this->SetMargins(15, 15, 15);
 
+        // Left side - Lilac background (approximated RGB 200, 162, 200)
+        $this->SetFillColor(200, 162, 200);
+        $this->Rect(0, 0, 63, 297, 'F');
 
-        $this->SetFont('Arial', '', 10);
-        $contact = "Phone: " . ($portfolio['contact_phone'] ?? 'N/A') . "\n" .
-                   "Email: " . ($portfolio['contact_email'] ?? 'N/A') . "\n" .
-                   "Address: " . ($portfolio['address'] ?? 'Your Street Address');
-        $contactYStart = $this->GetY();
-        $this->SetXY(20, $contactYStart);
-        $this->MultiCell(100, 8, $contact, 0, 'L');
-        $contactHeight = $this->GetY() - $contactYStart;
+        // Right side - Cream white background (approximated RGB 245, 245, 220)
+        $this->SetFillColor(245, 245, 220);
+        $this->Rect(63, 0, 147, 297, 'F');
 
+        // Left side content (30% width) - Personal Info
+        $leftX = 5;
+        $leftWidth = 53;
+        $yPos = 15;
 
-        $imageWidth = 40;
-        $imageX = 210 - 20 - $imageWidth;
+        // Profile image - Centered in left column
         if ($portfolio['photo_path'] && file_exists($portfolio['photo_path'])) {
-            $this->Image($portfolio['photo_path'], $imageX, $contactYStart, $imageWidth, 40);
+            $imageWidth = 35;
+            $imageX = $leftX + ($leftWidth - $imageWidth) / 2;
+            $this->Image($portfolio['photo_path'], $imageX, $yPos, $imageWidth, 35);
             $this->SetLineWidth(0.2);
-            $this->SetDrawColor(150, 150, 150);
-            $this->Rect($imageX, $contactYStart, $imageWidth, 40);
+            $this->SetDrawColor(255, 255, 255);
+            $this->Rect($imageX, $yPos, $imageWidth, 35);
+            $yPos += 40;
         }
 
+        // Full Name
+        $this->SetXY($leftX, $yPos);
+        $this->SetFont('Times', 'B', 20);
+        $this->SetTextColor(128, 128, 128); // Gray color for left side text
+        $this->MultiCell($leftWidth, 8, strtoupper($portfolio['full_name'] ?? 'HAMZA'), 0, 'C');
+        $yPos = $this->GetY() + 5;
 
-        $imageHeight = 40;
-        $maxHeight = max($contactHeight, $portfolio['photo_path'] && file_exists($portfolio['photo_path']) ? $imageHeight : 0);
-        $this->SetY($contactYStart + $maxHeight + 5);
+        // Job Title
+        $this->SetXY($leftX, $yPos);
+        $this->SetFont('Times', 'I', 12);
+        $this->SetTextColor(128, 128, 128); // Gray color for left side text
+        $this->MultiCell($leftWidth, 6, $portfolio['job_title'] ?? 'PLAYER', 0, 'C');
+        $yPos = $this->GetY() + 10;
 
+        // Contact Info
+        $this->SetXY($leftX, $yPos);
+        $this->SetFont('Helvetica', '', 9);
+        $this->SetTextColor(128, 128, 128); // Gray color for left side text
+        $contact = "Phone: " . ($portfolio['contact_phone'] ?? '1234567809') . "\n" .
+                  "Email: " . ($portfolio['contact_email'] ?? 'hamza@gmail.com') . "\n" .
+                  "Address: " . ($portfolio['address'] ?? 'feni, bangladesh');
+        $this->MultiCell($leftWidth, 5, $contact, 0, 'L');
+        $yPos = $this->GetY() + 10; // Add some space after the address
 
-        $yPos = $this->GetY();
+        // Short Bio
+        $this->SetXY($leftX, $yPos);
+        $this->SetFont('Helvetica', 'B', 10);
+        $this->SetTextColor(128, 128, 128); // Gray color for left side text
+        $yPos = $this->GetY() + 2;
 
+        $this->SetXY($leftX, $yPos);
+        $this->SetFont('Helvetica', '', 9);
+        $this->SetTextColor(128, 128, 128); // Gray color for left side text
+        $this->MultiCell($leftWidth, 5, $portfolio['short_bio'] ?? 'No short bio provided.', 0, 'L');
+        $yPos = $this->GetY() + 10; // Add some space after the Short Bio
 
-        $this->SetXY(20, $yPos);
+        // Right side content (70% width) - Details
+        $rightX = 68; // Starting X for left side of right section
+        $rightWidth = 137; // Usable width
+        $sectionWidth = 80; // Width for each section
+        $yPos = 15;
+
+        // Short Bio/Profile (Right Side)
+        $this->SetXY($rightX, $yPos); // Start at left of right section
         $this->ChapterTitle('Profile');
-        $this->SetFont('Arial', '', 10);
-        $this->MultiCell(0, 5, $portfolio['resume_summary'] ?? $portfolio['short_bio'] ?? 'Lorem ipsum dolor sit amet...', 0, 'J');
-        $this->Ln(5);
-        $yPos = $this->GetY();
+        $this->SetFont('Times', '', 11);
+        $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+        $this->SetXY($rightX, $this->GetY()); // Reset X for subtext
+        $this->MultiCell($sectionWidth, 5, $portfolio['resume_summary'] ?? $portfolio['short_bio'] ?? 'will beat india', 0, 'L');
+        $yPos = $this->GetY() + 5;
 
-
+        // Work Experience
         if (!empty($work_experiences)) {
-            $this->SetXY(20, $yPos);
+            $this->SetXY($rightX, $yPos);
             $this->ChapterTitle('Experience');
-            $this->SetFont('Arial', '', 10);
-            foreach ($work_experiences as $exp) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell(0, 5, $exp['job_duration'], 0, 1, 'L');
-                $this->SetFont('Arial', 'I', 10);
-                $this->Cell(0, 5, $exp['company_name'], 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell(0, 5, $exp['job_responsibilities'], 0, 'J');
-                $this->Ln(3);
-            }
-            $yPos = $this->GetY();
+            $this->SetFont('Times', '', 11);
+            $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+            $this->SetXY($rightX, $this->GetY());
+            $this->MultiCell($sectionWidth, 5, 'sa nono assa', 0, 'L');
+            $yPos = $this->GetY() + 5;
         }
 
-
-        $this->SetXY(20, $yPos);
+        // Education
+        $this->SetXY($rightX, $yPos);
         $this->ChapterTitle('Education');
-        $this->SetFont('Arial', '', 10);
-        if (!empty($academic_backgrounds)) {
-            foreach ($academic_backgrounds as $ab) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell(0, 5, $ab['year'] . ' | ' . $ab['degree'], 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->Cell(0, 5, $ab['institute'], 0, 1, 'L');
-                $this->Ln(2);
-            }
-        } else {
-            $this->Cell(0, 5, '2014 - 2016 | Degree / Major Name', 0, 1, 'L');
-            $this->Cell(0, 5, 'University name here', 0, 1, 'L');
-        }
-        $yPos = $this->GetY();
+        $this->SetFont('Times', '', 11);
+        $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+        $this->SetXY($rightX, $this->GetY());
+        $this->MultiCell($sectionWidth, 5, '2025 | bsc ewu', 0, 'L');
+        $yPos = $this->GetY() + 5;
 
-
-        $this->SetXY(20, $yPos);
+        // Skills
+        $this->SetXY($rightX, $yPos);
         $this->ChapterTitle('Skills');
-        $this->SetFont('Arial', '', 10);
-        $skills = str_replace("\n", "\n- ", "- " . trim($portfolio['technical_skills'] ?? 'Photoshop\nIllustrator\nInDesign\nAfter Effects\nSketch'));
+        $this->SetFont('Times', '', 11);
+        $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+        $skills = str_replace("\n", "\n- ", "- " . trim($portfolio['technical_skills'] ?? '- defense'));
         $skills = str_replace(['æç', 'æ', 'ç', 'â€¢'], '', $skills);
-        $this->MultiCell(0, 5, $skills, 0, 'L');
-        $yPos = $this->GetY();
+        $this->SetXY($rightX, $this->GetY());
+        $this->MultiCell($sectionWidth, 5, $skills, 0, 'L');
+        $yPos = $this->GetY() + 5;
 
-
-        $this->SetXY(20, $yPos);
+        // Languages
+        $this->SetXY($rightX, $yPos);
         $this->ChapterTitle('Languages');
-        $this->SetFont('Arial', '', 10);
-        $languages = str_replace("\n", "\n- ", "- " . trim($portfolio['languages'] ?? 'English\nFrench\nSpanish'));
+        $this->SetFont('Times', '', 11);
+        $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+        $languages = str_replace("\n", "\n- ", "- " . trim($portfolio['languages'] ?? '- bangla, english'));
         $languages = str_replace(['æç', 'æ', 'ç', 'â€¢'], '', $languages);
-        $this->MultiCell(0, 5, $languages, 0, 'L');
-        $yPos = $this->GetY();
+        $this->SetXY($rightX, $this->GetY());
+        $this->MultiCell($sectionWidth, 5, $languages, 0, 'L');
+        $yPos = $this->GetY() + 5;
 
-
+        // Projects
         if (!empty($projects)) {
-            $this->SetXY(20, $yPos);
+            $this->SetXY($rightX, $yPos);
             $this->ChapterTitle('Projects');
-            $this->SetFont('Arial', '', 10);
-            foreach ($projects as $proj) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell(0, 5, $proj['project_title'], 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell(0, 5, $proj['project_description'], 0, 'J');
-                $this->Ln(3);
-            }
-            $yPos = $this->GetY();
+            $this->SetFont('Times', '', 11);
+            $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+            $this->SetXY($rightX, $this->GetY());
+            $this->MultiCell($sectionWidth, 5, 'assss dasa', 0, 'L');
+            $yPos = $this->GetY() + 5;
         }
 
-
-        // New: Publications Section
+        // Publications
         if (!empty($publications)) {
-            $this->SetXY(20, $yPos);
+            $this->SetXY($rightX, $yPos);
             $this->ChapterTitle('Publications');
-            $this->SetFont('Arial', '', 10);
-            foreach ($publications as $pub) {
-                $this->SetFont('Arial', 'B', 10);
-                $this->Cell(0, 5, $pub['title'], 0, 1, 'L');
-                $this->SetFont('Arial', '', 10);
-                $this->MultiCell(0, 5, $pub['description'], 0, 'J');
-                $this->Ln(3);
-            }
+            $this->SetFont('Times', '', 11);
+            $this->SetTextColor(0, 0, 128); // Navy blue for right side text
+            $this->SetXY($rightX, $this->GetY());
+            $this->MultiCell($sectionWidth, 5, 'dsads dasdas prothon alo qbkamdbs', 0, 'L');
+            $yPos = $this->GetY() + 5;
         }
     }
 }
