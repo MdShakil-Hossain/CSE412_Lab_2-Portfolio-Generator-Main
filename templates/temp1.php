@@ -50,7 +50,8 @@ class PDF_Temp1 extends FPDF {
                    "Email: " . ($portfolio['contact_email'] ?? 'N/A') . "\n" .
                    "Address: " . ($portfolio['address'] ?? 'Your Street Address');
         $contactYStart = $this->GetY();
-        $this->MultiCell(100, 5, $contact, 0, 'L');
+        $this->SetXY(20, $contactYStart);
+        $this->MultiCell(100, 8, $contact, 0, 'L');
         $contactHeight = $this->GetY() - $contactYStart;
 
 
