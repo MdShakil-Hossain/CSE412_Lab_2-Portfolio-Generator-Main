@@ -57,7 +57,7 @@ $stmt->close();
                     <h2>Select a Template</h2>
                     <p class="card-description">Choose a template to start building your portfolio.</p>
                     <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
-                        <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
+                        <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 </option>
                         <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
                         <option value="temp3" <?php echo $selected_template === 'temp3' ? 'selected' : ''; ?>>Template 3</option>
                         <option value="temp4" <?php echo $selected_template === 'temp4' ? 'selected' : ''; ?>>Template 4</option>
@@ -83,7 +83,7 @@ $stmt->close();
                         <h2>Enhance Existing Portfolio</h2>
                         <p class="card-description">Update or refine your existing portfolio with new details.</p>
                         <select name="template" class="form-control" style="margin-bottom: 1rem; width: 100%; max-width: 300px;">
-                            <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 (Laura Parker Style)</option>
+                            <option value="temp1" <?php echo $selected_template === 'temp1' ? 'selected' : ''; ?>>Template 1 </option>
                             <option value="temp2" <?php echo $selected_template === 'temp2' ? 'selected' : ''; ?>>Template 2 (Single Column)</option>
                             <option value="temp3" <?php echo $selected_template === 'temp3' ? 'selected' : ''; ?>>Template 3</option>
                             <option value="temp4" <?php echo $selected_template === 'temp4' ? 'selected' : ''; ?>>Template 4</option>
